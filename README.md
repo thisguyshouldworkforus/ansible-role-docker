@@ -1,11 +1,8 @@
 ---
-
 # 🚀 Ansible Role: Docker Engine + GPU-Aware Configuration
 
 *A clean, modern Ansible role for installing Docker on Linux systems, automatically GPU-aware and optimized for production-ready hosts.*
-
 ---
-
 ## 🌟 Overview
 
 This Ansible role installs and configures the **Docker Engine** on Linux systems, including optional GPU-enhanced support when NVIDIA GPUs (Quadro P1000, RTX A5000) are detected.
