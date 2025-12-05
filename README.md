@@ -1,8 +1,7 @@
----
 # 🚀 Ansible Role: Docker Engine + GPU-Aware Configuration
 
 *A clean, modern Ansible role for installing Docker on Linux systems, automatically GPU-aware and optimized for production-ready hosts.*
----
+--- 
 ## 🌟 Overview
 
 This Ansible role installs and configures the **Docker Engine** on Linux systems, including optional GPU-enhanced support when NVIDIA GPUs (Quadro P1000, RTX A5000) are detected.
@@ -11,7 +10,7 @@ Designed for **clarity, reliability, and automation excellence**, the role dynam
 
 If you're looking for an elegant, predictable, and DevOps-grade Docker installation workflow—this role is for you.
 
----
+--- 
 
 ## ⚡ Key Features
 
@@ -31,7 +30,7 @@ has_gpu: true
 
 This fact allows downstream tasks and other roles to behave GPU-aware without requiring manual configuration.
 
----
+--- 
 
 ### 📦 Docker Repository Setup
 
@@ -41,7 +40,7 @@ The role configures the **official Docker APT/YUM repositories**, ensuring:
 * Secure GPG key management
 * Future-proof upgrade path
 
----
+--- 
 
 ### 🐳 Docker Engine Installation
 
@@ -56,7 +55,7 @@ Includes installation and configuration of:
   * Correct daemon reload
   * Immediate service restart
 
----
+--- 
 
 ### 🛠 System Profiles & Configuration
 
@@ -68,7 +67,7 @@ The role deploys supporting files such as:
 
 This ensures system-wide Docker environment variables and convenience functions are available for all users.
 
----
+--- 
 
 ### 🎯 Idempotent, Stable, and Safe
 
@@ -86,7 +85,7 @@ The role intentionally minimizes state mutations, making it safe for:
 * Large clusters
 * Immutable infrastructure workflows
 
----
+--- 
 
 ## 📁 Example Playbook
 
@@ -100,7 +99,7 @@ The role intentionally minimizes state mutations, making it safe for:
     - role: docker
 ```
 
----
+--- 
 
 ## 🔧 Variables
 
@@ -110,7 +109,7 @@ The role intentionally minimizes state mutations, making it safe for:
 
 No user variables are required for basic operation—everything is auto-configuring.
 
----
+--- 
 
 ## 🧩 Role Behavior Flow
 
@@ -135,7 +134,7 @@ No user variables are required for basic operation—everything is auto-configur
 Deploy /etc/profile.d/docker.sh
 ```
 
----
+--- 
 
 ## 🧪 Tested On
 
@@ -144,7 +143,7 @@ Deploy /etc/profile.d/docker.sh
 * Systems with and without NVIDIA GPUs
 * Workstation-class and server-class hardware
 
----
+--- 
 
 ## 🛡️ Requirements
 
@@ -153,7 +152,7 @@ Deploy /etc/profile.d/docker.sh
 * Ansible ≥ 2.9
 * Root privileges
 
----
+--- 
 
 ## 🌐 Why This Role Exists
 
@@ -163,20 +162,20 @@ This role was built to solve a common infrastructure automation problem:
 
 Modern infrastructure deserves modern automation, and this role embraces that philosophy.
 
----
+--- 
 
 ## 🤝 Contributing
 
 Pull requests, feature enhancements, bug reports, and discussions are always welcome.
 If you think Docker installation should be simple, reliable, and elegant—you're in the right place.
 
----
+--- 
 
 ## 📄 License
 
 MIT License — Do whatever you want, just don’t sue anyone.
 
----
+--- 
 
 ## 🎉 Final Notes
 
@@ -189,5 +188,4 @@ If you want to integrate:
 * Swarm / Compose / Buildx support
 
 …this role provides a clean, structured foundation.
-
----
+...
