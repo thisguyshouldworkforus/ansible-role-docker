@@ -1,0 +1,116 @@
+---
+- name: Scan for PCI Devices # Quadro P1000 || RTX A5000
+  ansible.builtin.shell:
+    cmd: lspci | command grep -Ei 'P1000|A5000'
+  register: gpu_info
+  failed_when: false
+  changed_when: false
+
+- name: Add Facts for later on
+  ansible.builtin.set_fact:
+    has_gpu: true
+  failed_when: false
+  changed_when: false
+  when: gpu_info.stdout is defined and gpu_info.stdout != ""
+
+- name: Add Docker Repo
+  ansible.builtin.yum_repository:
+    name: docker-ce-stable
+    description: Docker CE Stable - $basearch
+    baseurl: "https://download.docker.com/linux/rhel/{{ ansible_distribution_major_version }}/$basearch/stable/"
+    gpgcheck: true
+    gpgkey: https://download.docker.com/linux/rhel/gpg
+    enabled: true
+
+- name: Add Nvidia Container Toolkit Repo
+  ansible.builtin.yum_repository:
+    name: nvidia-container-toolkit
+    description: Nvidia Container Toolkit - $basearch
+    baseurl: https://nvidia.github.io/libnvidia-container/stable/rpm/$basearch
+    gpgcheck: true
+    gpgkey: https://nvidia.github.io/libnvidia-container/gpgkey
+    enabled: true
+  tags: nvidia
+  when: has_gpu
+
+- name: Kill the DNF Cache
+  ansible.builtin.dnf:
+    expire-cache: true
+
+- name: Rebuild the DNF Cache
+  ansible.builtin.dnf:
+    update_cache: true
+
+- name: Ensure Docker is installed
+  ansible.builtin.dnf:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - containerd.io
+    - docker-buildx-plugin
+    - docker-ce
+    - docker-ce-cli
+    - docker-compose-plugin
+
+- name: Ensure required software packages are installed
+  ansible.builtin.dnf:
+    name: nvidia-container-toolkit
+    state: present
+  tags: nvidia
+  when: has_gpu
+
+- name: Ensure the nvidia-container-runtime is configured
+  ansible.builtin.command:
+    cmd: nvidia-ctk runtime configure --runtime=docker
+  args:
+    creates: /etc/docker/daemon.json
+  register: nvidia_runtime_config
+  failed_when: nvidia_runtime_config.rc != 0
+  changed_when: nvidia_runtime_config.rc == 0
+  tags: nvidia
+  when: has_gpu
+
+- name: Ensure overrides for the docker daemon are in place
+  ansible.builtin.copy:
+    src: /home/ansible/roles/docker/files/daemon.json
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: '0644'
+  tags: core
+
+- name: Create the docker service override directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  tags: core
+
+- name: Ensure docker service override file is in place
+  ansible.builtin.copy:
+    src: /home/ansible/roles/docker/files/docker-override.conf
+    dest: /etc/systemd/system/docker.service.d/override.conf
+    owner: root
+    group: root
+    mode: '0644'
+  tags: core
+
+- name: Ensure the docker daemon is restarted and enabled
+  ansible.builtin.systemd:
+    name: docker
+    state: restarted
+    enabled: true
+    daemon_reload: true
+  tags: core
+
+- name: Copy config files
+  ansible.builtin.copy:
+    src: /home/ansible/roles/docker/files/docker.sh
+    dest: /etc/profile.d/docker.sh
+    owner: root
+    group: root
+    mode: '0755'
+  tags: profile
+...
