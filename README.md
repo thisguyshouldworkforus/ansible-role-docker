@@ -1,7 +1,3 @@
-Below is a **polished, professional, highly-engaging README.md** drafted specifically for the **Docker Ansible Role** you uploaded.
-
-It is written to be immediately publishable on **GitHub / Galaxy**, with strong narrative style, proper Markdown structure, badges, usage examples, and explanations of every task your role performs.
-
 ---
 
 # 🚀 Ansible Role: Docker Engine + GPU-Aware Configuration
