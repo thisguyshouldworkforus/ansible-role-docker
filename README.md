@@ -1,191 +1,94 @@
-# 🚀 Ansible Role: Docker Engine + GPU-Aware Configuration
+# ansible-role-docker
 
-*A clean, modern Ansible role for installing Docker on Linux systems, automatically GPU-aware and optimized for production-ready hosts.*
---- 
-## 🌟 Overview
+## Overview
 
-This Ansible role installs and configures the **Docker Engine** on Linux systems, including optional GPU-enhanced support when NVIDIA GPUs (Quadro P1000, RTX A5000) are detected.
+This role installs and configures **Docker Engine** on a RHEL-style homelab server.  
+It sets up the official Docker repository, optionally configures the NVIDIA Container Toolkit when a supported GPU is found, manages daemon overrides, and adds a convenience profile script for managing Docker services.  
+The result is a Docker host that is GPU-aware (when applicable) and exposes Docker in a predictable, tuned configuration.
 
-Designed for **clarity, reliability, and automation excellence**, the role dynamically adapts to the target host, enabling GPU-related configuration only when hardware is present. This makes the role safe for both **general-purpose servers** and **AI/ML compute nodes**.
-
-If you're looking for an elegant, predictable, and DevOps-grade Docker installation workflow—this role is for you.
-
---- 
-
-## ⚡ Key Features
-
-### 🔍 Automatic GPU Detection
-
-The role scans PCI devices for NVIDIA GPUs (P1000 / A5000) using:
-
-```bash
-lspci | grep -Ei 'P1000|A5000'
-```
-
-If detected, the role sets:
-
-```yaml
-has_gpu: true
-```
-
-This fact allows downstream tasks and other roles to behave GPU-aware without requiring manual configuration.
-
---- 
-
-### 📦 Docker Repository Setup
-
-The role configures the **official Docker APT/YUM repositories**, ensuring:
-
-* Latest stable Docker packages
-* Secure GPG key management
-* Future-proof upgrade path
-
---- 
-
-### 🐳 Docker Engine Installation
-
-Includes installation and configuration of:
-
-* `docker-ce`
-* `docker-ce-cli`
-* `containerd.io`
-* Systemd service configuration for:
-
-  * Automatic start on boot
-  * Correct daemon reload
-  * Immediate service restart
-
---- 
-
-### 🛠 System Profiles & Configuration
-
-The role deploys supporting files such as:
-
-```
-/etc/profile.d/docker.sh
-```
-
-This ensures system-wide Docker environment variables and convenience functions are available for all users.
-
---- 
-
-### 🎯 Idempotent, Stable, and Safe
-
-No task makes unnecessary changes.
-
-```yaml
-failed_when: false
-changed_when: false
-```
-
-The role intentionally minimizes state mutations, making it safe for:
-
-* Repeated runs
-* High-automation pipelines
-* Large clusters
-* Immutable infrastructure workflows
-
---- 
-
-## 📁 Example Playbook
-
-```yaml
 ---
-- name: Install & Configure Docker
-  hosts: all
-  become: true
 
-  roles:
-    - role: docker
-```
+## Task-by-Task Breakdown
 
---- 
+### Scanning for NVIDIA GPUs
 
-## 🔧 Variables
+This task runs `lspci` and searches for specific GPU models (e.g., Quadro P1000, RTX A5000).  
+The output is stored in `gpu_info` and is used to decide whether to enable GPU-specific configuration later.  
+It lets the role behave differently on GPU and non-GPU hosts without hardcoding that decision.
 
-| Variable  | Type    | Default       | Description                                                                               |
-| --------- | ------- | ------------- | ----------------------------------------------------------------------------------------- |
-| `has_gpu` | boolean | auto-detected | Set automatically if NVIDIA GPUs are discovered. Use to conditionally enable GPU support. |
+### Setting a “has_gpu” Fact
 
-No user variables are required for basic operation—everything is auto-configuring.
+If the GPU scan finds a supported device, this task sets an Ansible fact `has_gpu: true`.  
+Subsequent tasks check this fact in their `when` clauses to determine whether the NVIDIA container runtime should be installed and configured.  
+It keeps the play lightweight on hosts without GPUs.
 
---- 
+### Adding the Docker Repository
 
-## 🧩 Role Behavior Flow
+This task configures the official `docker-ce-stable` yum repository.  
+It points DNF to Docker’s upstream packages (docker-ce, cli, plugins) and installs the repo’s GPG key.  
+Using the official repo ensures you’re getting actively maintained Docker builds rather than stale distribution packages.
 
-```
-┌─────────────────────────────┐
-│ Detect NVIDIA GPU (optional)│
-└───────────────┬─────────────┘
-                │ yes
-                ▼
-     Set fact: has_gpu = true
-                │
-                ▼
-    Configure Docker Repository
-                │
-                ▼
-        Install Docker Engine
-                │
-                ▼
- Configure systemd + daemon reload
-                │
-                ▼
-Deploy /etc/profile.d/docker.sh
-```
+### Adding the NVIDIA Container Toolkit Repository (GPU Hosts Only)
 
---- 
+If `has_gpu` is true, the role adds the NVIDIA Container Toolkit repository.  
+This repository provides `nvidia-container-toolkit` and related utilities used to make GPUs visible inside containers.  
+It’s only added when a GPU exists, to keep non-GPU hosts clean.
 
-## 🧪 Tested On
+### Dropping Cached DNF Metadata
 
-* Red Hat Enterprise Linux (RHEL) 8 / 9 / 10
-* Rocky Linux & AlmaLinux 8 / 9
-* Systems with and without NVIDIA GPUs
-* Workstation-class and server-class hardware
+This task expires the existing DNF cache.  
+It’s a housekeeping step that ensures the next metadata refresh pulls fresh repo information, including Docker’s and NVIDIA’s new repos.
 
---- 
+### Rebuilding the DNF Cache
 
-## 🛡️ Requirements
+Immediately after expiring the cache, the role triggers a cache rebuild.  
+This ensures that package lookups for Docker and NVIDIA tools work reliably on the next install tasks.
 
-* Python ≥ 3.x (target host)
-* Systemd-based Linux
-* Ansible ≥ 2.9
-* Root privileges
+### Installing Docker Engine Packages
 
---- 
+This task installs the core Docker components: engine, CLI, and the Docker Compose plugin (among others listed in the task).  
+It’s the core of making the host a usable Docker node.  
+After this step, `docker` and `docker compose` are available on the system.
 
-## 🌐 Why This Role Exists
+### Installing NVIDIA Container Toolkit (GPU Hosts Only)
 
-This role was built to solve a common infrastructure automation problem:
+On GPU-equipped hosts, this task installs `nvidia-container-toolkit`.  
+This package provides integration between Docker and the NVIDIA driver stack so containers can request GPU access.  
+It’s skipped on hosts that don’t have a GPU, keeping their environment minimal.
 
-> *“Install Docker consistently, cleanly, and safely—without guesswork and without manually handling GPU quirks.”*
+### Configuring the NVIDIA Container Runtime (GPU Hosts Only)
 
-Modern infrastructure deserves modern automation, and this role embraces that philosophy.
+This task runs `nvidia-ctk runtime configure` and checks the result.  
+It updates Docker’s configuration to register the NVIDIA runtime, so containers can use `--gpus` and similar options.  
+If the command fails, the task is marked failed so you can see and fix GPU runtime issues early.
 
---- 
+### Placing the Docker Daemon Configuration
 
-## 🤝 Contributing
+Here the role copies a `daemon.json` into `/etc/docker/daemon.json`.  
+This file typically sets Docker to listen both on the Unix socket and optionally a TCP socket, and may define default runtimes or other tunables.  
+It gives you centralized control over Docker’s global behavior.
 
-Pull requests, feature enhancements, bug reports, and discussions are always welcome.
-If you think Docker installation should be simple, reliable, and elegant—you're in the right place.
+### Creating the Docker Service Override Directory
 
---- 
+This task ensures `/etc/systemd/system/docker.service.d/` exists.  
+Systemd uses this folder to hold override snippets that adjust how the `docker.service` unit is started.  
+Creating the directory is required before placing any override files.
 
-## 📄 License
+### Installing the Docker Service Override File
 
-MIT License — Do whatever you want, just don’t sue anyone.
+The role then copies `docker-override.conf` into the override directory.  
+This override clears and redefines the `ExecStart` line so Docker starts exactly the way you want (e.g., with specific flags).  
+It’s how the role takes precise control over the daemon startup command.
 
---- 
+### Restarting and Enabling the Docker Service
 
-## 🎉 Final Notes
+This task restarts the `docker` service, enables it at boot, and triggers a daemon reload.  
+It ensures your new daemon.json and override configuration are actually used and that Docker comes up after a reboot.
 
-This role is intentionally minimalistic and highly extensible.
-If you want to integrate:
+### Installing the Docker Profile Script
 
-* NVIDIA Docker runtime
-* GPU-enabled Kubernetes nodes
-* Hardened Docker daemon configs
-* Swarm / Compose / Buildx support
+Finally, the role copies `docker.sh` into `/etc/profile.d/docker.sh` and makes it executable.  
+This script exposes helper functions and shortcuts for managing Docker containers and services from the shell.  
+Because it lives in `/etc/profile.d`, those helpers are automatically available to users who log into the host.
 
-…this role provides a clean, structured foundation.
-...
+---
