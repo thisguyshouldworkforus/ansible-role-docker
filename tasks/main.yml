@@ -21,6 +21,7 @@
     gpgcheck: true
     gpgkey: https://download.docker.com/linux/rhel/gpg
     enabled: true
+  when: ansible_os_family | lower == 'redhat'
 
 - name: Add Nvidia Container Toolkit Repo
   ansible.builtin.yum_repository:
@@ -72,7 +73,7 @@
 
 - name: Ensure overrides for the docker daemon are in place
   ansible.builtin.copy:
-    src: /home/ansible/roles/docker/files/daemon.json
+    src: files/daemon.json
     dest: /etc/docker/daemon.json
     owner: root
     group: root
@@ -90,7 +91,7 @@
 
 - name: Ensure docker service override file is in place
   ansible.builtin.copy:
-    src: /home/ansible/roles/docker/files/docker-override.conf
+    src: files/docker-override.conf
     dest: /etc/systemd/system/docker.service.d/override.conf
     owner: root
     group: root
@@ -107,7 +108,7 @@
 
 - name: Copy config files
   ansible.builtin.copy:
-    src: /home/ansible/roles/docker/files/docker.sh
+    src: files/docker.sh
     dest: /etc/profile.d/docker.sh
     owner: root
     group: root

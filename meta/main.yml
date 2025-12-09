@@ -1,12 +1,11 @@
 ---
 galaxy_info:
   author: thisguyshouldworkforus
-  description: Ansible Roles for stuff and junk
+  description: Ansible role to install Docker on RedHat-based systems.
   company: "Hire This Guy, LLC."
   license: MIT
   min_ansible_version: 2.9
   galaxy_tags:
-    - 1.0.0
     - docker
     - containerization
     - containers
