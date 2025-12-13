@@ -1,17 +1,14 @@
 ---
-- name: Scan for PCI Devices # Quadro P1000 || RTX A5000
-  ansible.builtin.shell:
-    cmd: lspci | command grep -Ei 'P1000|A5000'
-  register: gpu_info
-  failed_when: false
+- name: Scan for PCI Devices
+  ansible.builtin.command:
+    cmd: lspci
+  register: lspci_out
   changed_when: false
+  failed_when: false
 
-- name: Add Facts for later on
+- name: Detect NVIDIA GPU
   ansible.builtin.set_fact:
-    has_gpu: true
-  failed_when: false
-  changed_when: false
-  when: gpu_info.stdout is defined and gpu_info.stdout != ""
+    has_gpu: "{{ lspci_out.stdout is search('P1000|A5000', ignorecase=True) }}"
 
 - name: Add Docker Repo
   ansible.builtin.yum_repository:
